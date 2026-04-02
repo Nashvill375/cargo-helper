@@ -1,0 +1,12 @@
+[package]
+name = "cargo-helper"
+version = "1.0.0"
+description = "A Gui for Cargo with support for vexide"
+license = "CC-BY-4.0"
+edition = "2024"
+
+[dependencies]
+eframe = "0.33.3"
+egui_alignments = "0.3.7"
+egui_extras = { version = "0.33.3", features = ["image", "svg"] }
+
