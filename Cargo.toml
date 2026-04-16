@@ -3,6 +3,7 @@ name = "cargo-helper"
 version = "1.0.0"
 description = "A Gui for Cargo with support for vexide"
 license = "CC-BY-4.0"
+repository = "https://github.com/Nashvill375/cargo-helper"
 edition = "2024"
 
 [dependencies]

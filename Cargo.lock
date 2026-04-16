@@ -3,15 +3,6 @@
 version = 4
 
 [[package]]
-name = "cargo-helper"
-version = "1.0.0"
-dependencies = [
- "eframe",
- "egui_alignments",
- "egui_extras",
-]
-
-[[package]]
 name = "ab_glyph"
 version = "0.2.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -566,6 +557,15 @@ dependencies = [
  "rustix 1.1.4",
  "wayland-backend",
  "wayland-client",
+]
+
+[[package]]
+name = "cargo-helper"
+version = "1.0.0"
+dependencies = [
+ "eframe",
+ "egui_alignments",
+ "egui_extras",
 ]
 
 [[package]]

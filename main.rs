@@ -1,5 +1,4 @@
-#![allow(unused)]
-
+#![allow(unused_must_use)]
 /* 
 eframe, egui_extras, and egui_alignments (dependencies of this program) was found at https://crates.io/crates/eframe
 with the following license attached
@@ -37,26 +36,20 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+use std::ffi::OsStr;
 use crate::egui::UiBuilder;
 use crate::egui::DragValue;
-use std::fs::ReadDir;
 use crate::CargoType::*;
-use crate::egui::Response;
-use crate::egui::Label;
 use std::path::Path;
 use crate::egui::InnerResponse;
-use crate::egui::Widget;
 use crate::egui::Ui;
-use crate::egui::Checkbox;
 use crate::egui::Align;
 use egui_alignments::row;
 use egui_alignments::Aligner;
-use std::str::FromStr;
 use std::cmp::Ordering::*;
 use crate::egui::Vec2;
 use crate::egui::ImageSource;
 use std::{
-    io,
     fs::{
         File,
         read_to_string,
@@ -64,10 +57,7 @@ use std::{
         write,
         exists
     },
-    process::{
-        Command,
-        ExitStatus
-    },
+    process::Command,
     time::{
         Duration,
         Instant,
@@ -97,7 +87,7 @@ use eframe::egui::{
 };
 
 fn main() {
-    let mut native_options = eframe::NativeOptions {
+    let native_options = eframe::NativeOptions {
         viewport: ViewportBuilder::default().with_always_on_top(),
         ..Default::default()
     };
@@ -139,26 +129,17 @@ impl ProgramManager {
             settings,
         }
     }
-    fn cargo(&mut self, cmd: &str) {
-        let mut command = Command::new("cargo");
-
-        command.current_dir(&self.directory);
-
-        let std_out = match (self.file_vexide, self.vexide_slot) {
-            (true, 0.0) => command.arg(cmd).status(),
-            (true, index) => command.args([cmd, "-s", &format!("{index}")]).status(),
-            (false, _) => command.arg(cmd).status(),
-        };
-        self.cmd_out(std_out);
-        self.term_vis = Instant::now();
-    }
-
-    fn cmd_out(&mut self, cmd: io::Result<ExitStatus>) {
-        self.command_output = if cmd.unwrap().success() {
+    fn cargo<I, S> (&mut self, args: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr> 
+    {
+        self.command_output = if Command::new("cargo").args(args).current_dir(&self.directory).status().unwrap().success() {
             RichText::new("Success").color(Color32::GREEN)
         } else {
             RichText::new("Failure").color(Color32::RED)
         };
+        self.term_vis = Instant::now();
     }
 
     fn back_slash(&mut self) {
@@ -239,7 +220,7 @@ impl PathsFile {
             File::create("paths.csv").unwrap();
             read_to_string("paths.csv").unwrap()
         }.split(',').for_each(|path| {
-            roots.push(path.to_string());
+            roots.push(path.trim().to_string());
         });
         let file = read_to_string("paths.csv").unwrap();
         
@@ -348,12 +329,12 @@ impl eframe::App for ProgramManager {
 
                         let button_text = match self.file_vexide {
                             true => "Upload",
-                            false => "Build"
+                            false => "Run"
                         };
 
                         let cargo_run = build.add_enabled(self.file_name != "File", Button::new(button_text));
 
-                        let mut scope_ui_builder = UiBuilder {
+                        let scope_ui_builder = UiBuilder {
                             invisible: !self.file_vexide,
                             ..Default::default()
                         };
@@ -367,28 +348,35 @@ impl eframe::App for ProgramManager {
                             }));
                         });
 
-                        if self.term_vis.elapsed() > Duration::from_secs(5) {
-                            self.term_vis = Instant::now() + Duration::from_secs(6);
-                        }
-
                         if cargo_run.clicked() {
-                            self.cargo(&button_text.to_lowercase());
+                            if self.file_vexide {
+                                if self.vexide_slot != 0.0 {
+                                    self.cargo(["v5", "upload", "-s", &format!("{}", self.vexide_slot)])
+                                } else {
+                                    self.cargo(["v5", "upload"])
+                                }
+                            } else {
+                                self.cargo(["run"])
+                            }
                         }
 
                         if cargo_build.clicked() {
-                            self.cargo("build");
+                            if self.file_vexide {
+                                self.cargo(["v5", "build"])
+                            } else {
+                                self.cargo(["build"])
+                            }
                         }
                         build.add_visible(self.term_vis.elapsed() < Duration::from_secs(3), eframe::egui::Label::new(self.command_output.clone()));
                     
                     });
                     main.horizontal(|docs| {
-                        let mut doc_cmd = Command::new("cargo");
                         if docs.add_enabled(self.file_name != "File", Button::new("Document")).clicked() {
-                            self.cmd_out(doc_cmd.arg("doc").status());
+                            self.cargo(["doc", "--open"])
                         }
 
                         if docs.add_enabled(self.file_name != "File", Button::new("Open docs")).clicked() {
-                            self.cmd_out(doc_cmd.args(["doc","--open"]).status());
+                            self.cargo(["doc", "--open"])
                         }
                     });
                     MenuButton::new("Add file").config(self.popup_behave.clone()).ui(main, |popup|{
@@ -408,7 +396,7 @@ impl eframe::App for ProgramManager {
                                 self.back_slash();
                             }
 
-                            let mut cd = read_dir(&self.add_dir).unwrap_or_else(|_| panic!("Error at {}", self.add_dir)).filter(|file| {
+                            let cd = read_dir(&self.add_dir).unwrap_or_else(|_| panic!("Error at {}", self.add_dir)).filter(|file| {
                                 if self.settings.show_hidden {
                                     true
                                 } else {
@@ -435,7 +423,11 @@ impl eframe::App for ProgramManager {
                                     if file.path().join("Cargo.toml").exists() {
                                         Some(FileButton::new(
                                             file.file_name().display().to_string(),
-                                            if file.path().join("Cargo.lock").display().to_string().contains("[[package]]\nname = \"vexide\"") {
+                                            if read_to_string(
+                                                file
+                                                .path()
+                                                .join("Cargo.lock")).expect("could not derive information from Lock file correctly")
+                                            .contains("[[package]]\nname = \"vexide\"") {
                                                 Vexide
                                             } else {
                                                 Cargo
@@ -510,7 +502,7 @@ impl eframe::App for ProgramManager {
                                     ).frame(false)
                                 );
                                 if button.clicked() {
-                                    let mut filtered_paths: String = 
+                                    let filtered_paths: String = 
                                     {
                                         filter_paths(&self.paths.roots, path.to_string())
                                     };
