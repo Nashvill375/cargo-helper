@@ -1,7 +1,9 @@
-A Ui for cargo with support for Vexide
+# Cargo Helper: A Ui for cargo with support for Vexide
 
-Runs in eframe
+## Installation
 
-download files and build in Cargo if you use vexide you should probably run this with nightly or you're going to have a bad day
+Open Terminal and type "cargo install cargo-helper"
 
-This is simply the source code, when I figure out GitHub I'll fix that.
+Alternatively, you can go to [crates.io](https://crates.io/crates/cargo-helper) and follow the instructions from there.
+
+### Make sure you have nightly if you use [Vexide](https://vexide.dev)!
