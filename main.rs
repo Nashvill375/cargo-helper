@@ -263,6 +263,28 @@ fn filter_paths(directs: &Vec<String>, path: String) -> String {
     output
 }
 
+struct ButtonAndName<'a> {
+    ui: Button<'a>,
+    name: String
+}
+
+fn rust_button(file_path: &'_ str) -> ButtonAndName<'_> {
+    let named_file = Path::new(file_path)
+    .file_name()
+    .expect("Could not retrive file name")
+    .to_str()
+    .expect("Could not convert path into file name");
+    let image = if read_to_string(Path::new(file_path).join("Cargo.lock")).unwrap().contains("vexide") {
+        Image::new(VEXIDE_SVG).fit_to_exact_size(Vec2::splat(25.0))
+    } else {
+        Image::new(RUST_PNG).fit_to_exact_size(Vec2::splat(25.0))
+    };
+    ButtonAndName {
+        ui: Button::image_and_text(image, RichText::new(named_file).size(20.0)).frame(false),
+        name: named_file.to_string()
+    }
+}
+
 // https://dashboardicons.com/icons/rust CC BY 4.0 
 const RUST_PNG: ImageSource = include_image!("rust.png");
 //No licese found for this image
@@ -271,8 +293,8 @@ const FOLDER_PNG: ImageSource = include_image!("folder.png");
 const VEXIDE_SVG: ImageSource = include_image!("vexide.svg");
 
 impl eframe::App for ProgramManager {
-    fn update(&mut self, ctx: &eframe::egui::Context, _: &mut eframe::Frame) {
-        CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
+        CentralPanel::default().show_inside(ui, |ui| {
             if !exists("settings.csv").expect("Could not determine the existence of settings") {
                 ui.heading("Hello!");
                 ui.label("Welcome to the Rust Program Manager! \nBefore we get started, please input some default settings.");
@@ -281,23 +303,12 @@ impl eframe::App for ProgramManager {
                 ui.vertical(|main|{
                     row(main, Align::TOP, |main| {
                         Aligner::left_top().show(main, |main| {
-                            main.collapsing(RichText::new(&self.file_name)
-                            .size(20.0), |dropdown| {
+                            main.collapsing(RichText::new(&self.file_name).size(20.0), |dropdown| {
                                 if !read_to_string("paths.csv").unwrap().trim().is_empty() {
                                     for file in &self.paths.roots {
-                                        let named_file = Path::new(&file)
-                                        .file_name()
-                                        .expect("Could not retrive file name")
-                                        .to_str()
-                                        .expect("Could not convert path into file name");
-                                        let button = dropdown.add(
-                                            Button::new(
-                                                RichText::new(named_file)
-                                                .size(20.0)
-                                            ).frame(false)
-                                        );
-                                        if button.clicked() {
-                                            self.file_name = named_file.to_string();
+                                        let button = rust_button(file);
+                                        if dropdown.add(button.ui).clicked() {
+                                            self.file_name = button.name;
                                             self.directory = file.to_string();
                                             if read_to_string(Path::new(file.trim()).join("Cargo.lock")).expect(&format!("{:?}", Path::new(file).join("Cargo.lock"))).contains("vexide") {
                                                 self.file_vexide = true;
@@ -486,22 +497,9 @@ impl eframe::App for ProgramManager {
 
                     MenuButton::new("Remove file").config(self.popup_behave.clone()).ui(main, |remove| {
                         ScrollArea::vertical().max_width(150.0).max_height(250.0).auto_shrink(Vec2b::new(false, true)).show(remove, |remove|{
-                            for path in &self.paths.roots.clone() {
-                                let button = remove.add(
-                                    Button::new(
-                                        RichText::new(
-                                            Path::new(
-                                                path.trim()
-                                            )
-                                        .file_name()
-                                        .expect("Could not derive names from removable directories")
-                                        .display()
-                                        .to_string()
-                                        )
-                                        .size(20.0)
-                                    ).frame(false)
-                                );
-                                if button.clicked() {
+                            for path in self.paths.roots.clone() {
+                                let button = rust_button(&path);
+                                if remove.add(button.ui).clicked() {
                                     let filtered_paths: String = 
                                     {
                                         filter_paths(&self.paths.roots, path.to_string())
@@ -516,6 +514,6 @@ impl eframe::App for ProgramManager {
                 });
             }
         });
-        ctx.request_repaint_after_secs(0.25);
+        ui.request_repaint_after_secs(0.25);
     }
 }
