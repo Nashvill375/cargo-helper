@@ -129,16 +129,22 @@ impl ProgramManager {
             settings,
         }
     }
+
     fn cargo<I, S> (&mut self, args: I)
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr> 
     {
-        self.command_output = if Command::new("cargo").args(args).current_dir(&self.directory).status().unwrap().success() {
+        self.gui_output(Command::new("cargo").args(args).current_dir(&self.directory));
+    }
+
+    fn gui_output(&mut self, command: &mut Command) {
+        self.command_output = if command.status().unwrap().success() {
             RichText::new("Success").color(Color32::GREEN)
         } else {
             RichText::new("Failure").color(Color32::RED)
         };
+        println!("{:?}", self.directory);
         self.term_vis = Instant::now();
     }
 
@@ -381,12 +387,17 @@ impl eframe::App for ProgramManager {
                         build.add_visible(self.term_vis.elapsed() < Duration::from_secs(3), eframe::egui::Label::new(self.command_output.clone()));
                     
                     });
-                    main.horizontal(|docs| {
-                        if docs.add_enabled(self.file_name != "File", Button::new("Document")).clicked() {
-                            self.cargo(["doc", "--open"])
+                    main.horizontal(|file_open| {
+                        if file_open.add_enabled(self.file_name != "File", Button::new("Open file")).clicked() {
+                            #[cfg(windows)]
+                            self.gui_output(Command::new("start").arg(&self.directory));
+                            #[cfg(target_os = "linux")]
+                            self.gui_output(&mut Command::new("xdg-open").arg(&self.directory));
+                            #[cfg(target_os = "macos")]
+                            self.gui_output(&mut Command::new("open").arg(&self.directory));
                         }
 
-                        if docs.add_enabled(self.file_name != "File", Button::new("Open docs")).clicked() {
+                        if file_open.add_enabled(self.file_name != "File", Button::new("Open docs")).clicked() {
                             self.cargo(["doc", "--open"])
                         }
                     });
