@@ -8,5 +8,9 @@ Alternatively, you can download the executable file in the release tab, open ter
 
 ### Make sure you have nightly if you use [Vexide](https://vexide.dev)!
 
-## Note
+## Notes
 This is a very new project, if you're looking in the source code and find ways to optimize it, let me know!
+
+#### Warning!
+
+I have never used macOS enough to make rust code around it, if cargo-helper breaks on an apple device, let me know!
