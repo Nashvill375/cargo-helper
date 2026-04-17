@@ -4,6 +4,6 @@
 
 Open Terminal and type "cargo install cargo-helper"
 
-Alternatively, you can go to [crates.io](https://crates.io/crates/cargo-helper) and follow the instructions from there.
+Alternatively, you can download the executable file in the release tab, open terminal and type "cargo install --path ${path_to_file}.
 
 ### Make sure you have nightly if you use [Vexide](https://vexide.dev)!
